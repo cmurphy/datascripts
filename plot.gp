@@ -10,6 +10,7 @@ if (!exists("start")) start=0  # First stream
 if (!exists("end")) end=3      # Last stream (default half-set)
 
 # Frame vs Size
+if(exists("title")) set title title.': Frame vs Size'
 set xlabel "Frame"
 set ylabel "Size (bits)"
 set xrange [-1:201]
@@ -24,6 +25,7 @@ unset multiplot
 set output
 
 # Frame vs PSNR
+if(exists("title")) set title title.': Frame vs PSNR' 
 set output ''.ver.'/frame_v_psnr.pdf'
 set ylabel "PSNR (dB)"
 set yrange [28:34]
