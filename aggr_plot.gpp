@@ -1,8 +1,5 @@
 #!/usr/bin/env gnuplot
-# This plots a single stream and all the frames it depends on, with the aggregate (sum or avg) plotted as well
-
-# for each stream get dependencies from config file
-# graph each dependency, but only frames marked "REF_VIEW"
+# This plots a each stream individually and all the frames it depends on, with the aggregate (sum or avg) plotted as well
 
 set term pdfcairo enhanced font "Times,8" size 12,6
 colors = "blue dark-green red dark-magenta dark-yellow orange dark-pink dark-cyan"
@@ -11,11 +8,11 @@ aggr_col = "black"
 set for [i=0:words(colors)] style line 10+i pointtype 7 pointsize 0.25 linecolor rgb word(colors,i+1)
 set style line 1 pointtype 7 pointsize 0.25 linecolor aggr_col
 set key Left
-if (!exists("stream"))  stream  = 0         # Primary stream
-if (!exists("ver"))     ver     = 3         # Which encode configuration version
-if (!exists("depfile")) depfile = "deps"    # Dependency configuration file
+if (!exists("ver"))     ver     = 3                                                        # Which encode configuration version
+if (!exists("depfile")) depfile = "deps"                                                   # Dependency configuration file
+if (!exists("start"))   start   = system(sprintf("head -1 %s | cut -d ':' -f 1", depfile)) # Starting stream is user-specified or the first in the dependency file
+if (!exists("end"))     end     = system(sprintf("tail -1 %s | cut -d ':' -f 1", depfile)) # Final stream is user-specified or the last in the dependency file
 
-deps=system(sprintf("grep -e ^%d %s | cut -d ':' -f 2",stream, depfile))  # Get dependencies of stream x
 
 # Frame vs Size
 if(exists("title")) set title title.': Frame vs Size'
@@ -23,35 +20,45 @@ set xlabel "Frame"
 set ylabel "Size (bits)"
 set xrange [-1:201]
 set xtics 0,8,200
-set yrange [0:1300000]
+set yrange [0:2000000]
 set grid xtics linetype 1 linewidth 0.25 linecolor rgb "#cccccc"
-set output ''.ver.'/aggr_frame_v_size_'.stream.'.pdf'
-set multiplot
-set key at 200,1280000
-plot ''.ver.'/stream'.stream.'.dat' using 2:4 with points linestyle 10+stream title 'Stream '.stream
-set key at 200,1260000
-plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:4 with points linestyle 10+dep title 'Stream '.dep
-plot ''.ver.'/stream'.stream.'.dat' using 2:4:1 with labels offset 1 textcolor rgb word(colors,stream+1) notitle
-plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:4:1 with labels offset 1 textcolor rgb word(colors,dep+1) notitle
-set key at 200,1300000
-plot sprintf("<for i in %s; do grep REF_VIEW 1/stream${i}.dat; done | cat - 1/stream%d.dat | grep -v Frame | awk '{array[$2]+=$4; if($5==\"REF_VIEW\") {isref[$2]=$5}} END { for (i in array) {printf \"%-10s %-10d %-10s\\n\",i,array[i],isref[i] }}' | grep REF_VIEW | sort -nk 2", deps,stream) using 1:2 with points linestyle 1 title 'Total'
-unset multiplot
+set output ''.ver.'/aggr_frame_v_size.pdf'
+do for [i=start:end] {
+  deps=system(sprintf("grep -e ^%d %s | cut -d ':' -f 2",i, depfile))  # Get dependencies of stream i
+  set multiplot
+    set key at 200,1970000
+    plot ''.ver.'/stream'.i.'.dat' using 2:4 with points linestyle 10+i title 'Stream '.i
+    plot ''.ver.'/stream'.i.'.dat' using 2:4:1 with labels offset 1 textcolor rgb word(colors,i+1) notitle
+    if(deps != "") {
+      set key at 200,1940000
+      plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:4 with points linestyle 10+dep title 'Stream '.dep
+      plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:4:1 with labels offset 1 textcolor rgb word(colors,dep+1) notitle
+      set key at 200,2000000
+      plot sprintf("<for i in %s; do grep REF_VIEW %d/stream${i}.dat; done | cat - 1/stream%d.dat | grep -v Frame | awk '{array[$2]+=$4; if($5==\"REF_VIEW\") {isref[$2]=$5}} END { for (i in array) {printf \"%-10s %-10d %-10s\\n\",i,array[i],isref[i] }}' | grep REF_VIEW | sort -nk 2",deps,ver,i) using 1:2 with points linestyle 1 title 'Total'
+    }
+  unset multiplot
+}
 set output
 
 # Frame vs PSNR
 if(exists("title")) set title title.': Frame vs PSNR' 
-set output ''.ver.'/aggr_frame_v_psnr_'.stream.'.pdf'
+set output ''.ver.'/aggr_frame_v_psnr.pdf'
 set ylabel "PSNR (dB)"
 set yrange [28:34]
 set ytics 28,0.5,34
-set multiplot
-set key at 200,33.8
-plot ''.ver.'/stream'.stream.'.dat' using 2:3 with points linestyle 10+stream title 'Stream '.stream
-set key at 200,33.7
-plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:3 with points linestyle 10+dep title 'Stream '.dep
-plot ''.ver.'/stream'.stream.'.dat' using 2:3:1 with labels offset 1 textcolor rgb word(colors,stream+1) notitle
-plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:3:1 with labels offset 1 textcolor rgb word(colors,dep+1) notitle
-set key at 200,33.9
-plot sprintf("<for i in %s; do grep REF_VIEW 1/stream${i}.dat; done | cat - 1/stream%d.dat | grep -v Frame | awk '{array[$2]+=$3; ++count[$2]; if($5==\"REF_VIEW\") {isref[$2]=$5}} END { for (i in array) {printf \"%-10s %-10f %10s\\n\",i,array[i]/count[i],isref[i] }}' | grep REF_VIEW | sort -nk 2", deps,stream) using 1:2 with points linestyle 1 title 'Average'
-unset multiplot
+do for [i=start:end] {
+  deps=system(sprintf("grep -e ^%d %s | cut -d ':' -f 2",i, depfile))  # Get dependencies of stream i
+  set multiplot
+    set key at 200,33.8
+    plot ''.ver.'/stream'.i.'.dat' using 2:3 with points linestyle 10+i title 'Stream '.i
+    plot ''.ver.'/stream'.i.'.dat' using 2:3:1 with labels offset 1 textcolor rgb word(colors,i+1) notitle
+    set key at 200,33.7
+    if(deps != "") {
+      plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:3 with points linestyle 10+dep title 'Stream '.dep
+      plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:3:1 with labels offset 1 textcolor rgb word(colors,dep+1) notitle
+      set key at 200,33.9
+      plot sprintf("<for i in %s; do grep REF_VIEW %d/stream${i}.dat; done | cat - 1/stream%d.dat | grep -v Frame | awk '{array[$2]+=$3; ++count[$2]; if($5==\"REF_VIEW\") {isref[$2]=$5}} END { for (i in array) {printf \"%-10s %-10f %10s\\n\",i,array[i]/count[i],isref[i] }}' | grep REF_VIEW | sort -nk 2",deps,ver,i) using 1:2 with points linestyle 1 title 'Average'
+    }
+  unset multiplot
+}
 set output
