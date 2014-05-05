@@ -33,7 +33,7 @@ set key at 200,1260000
 plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:4 with points linestyle 10+dep title 'Stream '.dep
 plot ''.ver.'/stream'.stream.'.dat' using 2:4:1 with labels offset 1 textcolor rgb word(colors,stream+1) notitle
 plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:4:1 with labels offset 1 textcolor rgb word(colors,dep+1) notitle
-set key at 200,1240000
+set key at 200,1300000
 plot sprintf("<for i in %s; do grep REF_VIEW 1/stream${i}.dat; done | cat - 1/stream%d.dat | grep -v Frame | awk '{array[$2]+=$4; if($5==\"REF_VIEW\") {isref[$2]=$5}} END { for (i in array) {printf \"%-10s %-10d %-10s\\n\",i,array[i],isref[i] }}' | grep REF_VIEW | sort -nk 2", deps,stream) using 1:2 with points linestyle 1 title 'Total'
 unset multiplot
 set output
@@ -51,7 +51,7 @@ set key at 200,33.7
 plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:3 with points linestyle 10+dep title 'Stream '.dep
 plot ''.ver.'/stream'.stream.'.dat' using 2:3:1 with labels offset 1 textcolor rgb word(colors,stream+1) notitle
 plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:3:1 with labels offset 1 textcolor rgb word(colors,dep+1) notitle
-set key at 200,33.6
+set key at 200,33.9
 plot sprintf("<for i in %s; do grep REF_VIEW 1/stream${i}.dat; done | cat - 1/stream%d.dat | grep -v Frame | awk '{array[$2]+=$3; ++count[$2]; if($5==\"REF_VIEW\") {isref[$2]=$5}} END { for (i in array) {printf \"%-10s %-10f %10s\\n\",i,array[i]/count[i],isref[i] }}' | grep REF_VIEW | sort -nk 2", deps,stream) using 1:2 with points linestyle 1 title 'Average'
 unset multiplot
 set output
