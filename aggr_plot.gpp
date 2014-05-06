@@ -48,8 +48,9 @@ set style fill solid
 set xtics 0,1,7
 unset grid
 set key at 8,60000000
-plot sprintf("<for stream in \`seq %d %d \`; do for i in \`grep -e ^\$stream %s | cut -d ':' -f 2\`; do grep REF_VIEW %d/stream${i}.dat; done | cat - %d/stream${stream}.dat | grep -v Frame | awk '{sum+=$4} END { print '$stream'\"  \"sum; }'; done",start,end,depfile,ver,ver) using ($1+0.25):2 with boxes linecolor rgb "blue" title "Total Size with Dependent Frames" ,\
-     sprintf("<for stream in \`seq %d %d \`; do grep -v Frame %d/stream${stream}.dat | awk '{sum+=$4} END { print '$stream'\"  \"sum; }'; done",start,end,ver) using ($1-0.25):2 with boxes linecolor rgb "red" title "Total Size of Individual Frame"
+plot sprintf("<for stream in \`seq %d %d \`; do for i in \`grep -e ^\$stream %s | cut -d ':' -f 2\`; do grep REF_VIEW %d/stream${i}.dat; done | cat - %d/stream${stream}.dat | grep -v Frame | awk '{sum+=$4} END { print '$stream'\"  \"sum; }'; done",start,end,depfile,ver,ver) using ($1):2 with boxes linecolor rgb "blue" title "Total Size with Dependent Frames" ,\
+     sprintf("<for stream in \`seq %d %d \`; do grep -v Frame %d/stream${stream}.dat | awk '{sum+=$4} END { print '$stream'\"  \"sum; }'; done",start,end,ver) using ($1-0.3):2 with boxes linecolor rgb "red" title "Total Size of Individual Frame", \
+     sprintf("<for stream in \`seq %d %d \`; do for i in \`grep -e ^\$stream %s | cut -d ':' -f 2\`; do cat %d/stream${i}.dat; done | cat - %d/stream${stream}.dat | grep -v Frame | awk '{sum+=$4} END { print '$stream'\"  \"sum; }'; done",start,end,depfile,ver,ver) using ($1+0.3):2 with boxes linecolor rgb "black" title "Total Size with All Frames in Dependent Stream"
 set output
 
 # Frame vs PSNR
@@ -85,6 +86,8 @@ set style fill solid
 set xtics 0,1,7
 unset grid
 set key at 7,33.8
-plot sprintf("<for stream in \`seq %d %d \`; do for i in \`grep -e ^\$stream %s | cut -d ':' -f 2\`; do grep REF_VIEW %d/stream${i}.dat; done | cat - %d/stream${stream}.dat | grep -v Frame | awk '{sum+=$3;count+=1} END { print '$stream'\"  \"sum/count; }'; done",start,end,depfile,ver,ver) using ($1+0.25):2 with boxes linecolor rgb "blue" title "Total Size with Dependent Frames" ,\
-     sprintf("<for stream in \`seq %d %d \`; do grep -v Frame %d/stream${stream}.dat | awk '{sum+=$3;count+=1} END { print '$stream'\"  \"sum/count; }'; done",start,end,ver) using ($1-0.25):2 with boxes linecolor rgb "red" title "Total Size of Individual Frame"
+plot sprintf("<for stream in \`seq %d %d \`; do for i in \`grep -e ^\$stream %s | cut -d ':' -f 2\`; do grep REF_VIEW %d/stream${i}.dat; done | cat - %d/stream${stream}.dat | grep -v Frame | awk '{sum+=$3;count+=1} END { print '$stream'\"  \"sum/count; }'; done",start,end,depfile,ver,ver) using ($1):2 with boxes linecolor rgb "blue" title "Average PSNR with Dependent Frames" ,\
+     sprintf("<for stream in \`seq %d %d \`; do grep -v Frame %d/stream${stream}.dat | awk '{sum+=$3;count+=1} END { print '$stream'\"  \"sum/count; }'; done",start,end,ver) using ($1-0.3):2 with boxes linecolor rgb "red" title "Average PSNR of Individual Frames",\
+     sprintf("<for stream in \`seq %d %d \`; do for i in \`grep -e ^\$stream %s | cut -d ':' -f 2\`; do cat %d/stream${i}.dat; done | cat - %d/stream${stream}.dat | grep -v Frame | awk '{sum+=$3;count+=1} END { print '$stream'\"  \"sum/count; }'; done",start,end,depfile,ver,ver) using ($1+0.3):2 with boxes linecolor rgb "black" title "Average PSNR with All Frames in Dependent Stream" ,\
+
 set output
