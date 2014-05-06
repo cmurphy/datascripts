@@ -8,10 +8,10 @@ aggr_col = "black"
 set for [i=0:words(colors)] style line 10+i pointtype 7 pointsize 0.25 linecolor rgb word(colors,i+1)
 set style line 1 pointtype 7 pointsize 0.25 linecolor aggr_col
 set key Left
-if (!exists("ver"))     ver     = 3                                                        # Which encode configuration version
-if (!exists("depfile")) depfile = "deps"                                                   # Dependency configuration file
-if (!exists("start"))   start   = system(sprintf("head -1 %s | cut -d ':' -f 1", depfile)) # Starting stream is user-specified or the first in the dependency file
-if (!exists("end"))     end     = system(sprintf("tail -1 %s | cut -d ':' -f 1", depfile)) # Final stream is user-specified or the last in the dependency file
+if (!exists("ver"))     ver     = 3                                                            # Which encode configuration version
+if (!exists("depfile")) depfile = "deps"                                                       # Dependency configuration file
+if (!exists("start"))   start   = system(sprintf("head -1 %s | cut -d ':' -f 1", depfile)) + 0 # Starting stream is user-specified or the first in the dependency file
+if (!exists("end"))     end     = system(sprintf("tail -1 %s | cut -d ':' -f 1", depfile)) + 0 # Final stream is user-specified or the last in the dependency file
 
 
 # Frame vs Size
@@ -34,16 +34,27 @@ do for [i=start:end] {
       plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:4 with points linestyle 10+dep title 'Stream '.dep
       plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:4:1 with labels offset 1 textcolor rgb word(colors,dep+1) notitle
       set key at 200,2000000
-      plot sprintf("<for i in %s; do grep REF_VIEW %d/stream${i}.dat; done | cat - 1/stream%d.dat | grep -v Frame | awk '{array[$2]+=$4; if($5==\"REF_VIEW\") {isref[$2]=$5}} END { for (i in array) {printf \"%-10s %-10d %-10s\\n\",i,array[i],isref[i] }}' | grep REF_VIEW | sort -nk 2",deps,ver,i) using 1:2 with points linestyle 1 title 'Total'
+      plot sprintf("<for i in %s; do grep REF_VIEW %d/stream${i}.dat; done | cat - %d/stream%d.dat | grep -v Frame | awk '{array[$2]+=$4; if($5==\"REF_VIEW\") {isref[$2]=$5}} END { for (i in array) {printf \"%-10s %-10d %-10s\\n\",i,array[i],isref[i] }}' | grep REF_VIEW | sort -nk 2",deps,ver,ver,i) using 1:2 with points linestyle 1 title 'Total'
     }
   unset multiplot
 }
+set xrange [-1:8]
+set yrange[0:60000000]
+set boxwidth 0.25
+set style fill solid
+set xtics 0,1,7
+unset grid
+set key at 8,60000000
+plot sprintf("<for stream in \`seq %d %d \`; do for i in \`grep -e ^\$stream %s | cut -d ':' -f 2\`; do grep REF_VIEW %d/stream${i}.dat; done | cat - %d/stream${stream}.dat | grep -v Frame | awk '{sum+=$4} END { print '$stream'\"  \"sum; }'; done",start,end,depfile,ver,ver) using ($1+0.25):2 with boxes linecolor rgb "blue" title "Total Size with Dependent Frames" ,\
+     sprintf("<for stream in \`seq %d %d \`; do grep -v Frame %d/stream${stream}.dat | awk '{sum+=$4} END { print '$stream'\"  \"sum; }'; done",start,end,ver) using ($1-0.25):2 with boxes linecolor rgb "red" title "Total Size of Individual Frame"
 set output
 
 # Frame vs PSNR
 if(exists("title")) set title title.': Frame vs PSNR' 
 set output ''.ver.'/aggr_frame_v_psnr.pdf'
 set ylabel "PSNR (dB)"
+set xrange [-1:201]
+set xtics 0,8,200
 set yrange [28:34]
 set ytics 28,0.5,34
 do for [i=start:end] {
@@ -57,7 +68,7 @@ do for [i=start:end] {
       plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:3 with points linestyle 10+dep title 'Stream '.dep
       plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", ''.ver.'/stream'.dep.'.dat') using 2:3:1 with labels offset 1 textcolor rgb word(colors,dep+1) notitle
       set key at 200,33.9
-      plot sprintf("<for i in %s; do grep REF_VIEW %d/stream${i}.dat; done | cat - 1/stream%d.dat | grep -v Frame | awk '{array[$2]+=$3; ++count[$2]; if($5==\"REF_VIEW\") {isref[$2]=$5}} END { for (i in array) {printf \"%-10s %-10f %10s\\n\",i,array[i]/count[i],isref[i] }}' | grep REF_VIEW | sort -nk 2",deps,ver,i) using 1:2 with points linestyle 1 title 'Average'
+      plot sprintf("<for i in %s; do grep REF_VIEW %d/stream${i}.dat; done | cat - %d/stream%d.dat | grep -v Frame | awk '{array[$2]+=$3; ++count[$2]; if($5==\"REF_VIEW\") {isref[$2]=$5}} END { for (i in array) {printf \"%-10s %-10f %10s\\n\",i,array[i]/count[i],isref[i] }}' | grep REF_VIEW | sort -nk 2",deps,ver,ver,i) using 1:2 with points linestyle 1 title 'Average'
     }
   unset multiplot
 }
