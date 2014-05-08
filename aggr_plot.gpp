@@ -3,10 +3,9 @@
 
 set term pdfcairo enhanced font "Times,8" size 12,6
 colors = "blue dark-green red dark-magenta dark-yellow orange dark-pink dark-cyan"
-aggr_col = "black"
 
 set for [i=0:words(colors)] style line 10+i pointtype 7 pointsize 0.25 linecolor rgb word(colors,i+1)
-set style line 1 pointtype 7 pointsize 0.25 linecolor aggr_col
+set style line 1 pointtype 7 pointsize 0.5 linecolor "black"
 set key Left
 if (!exists("ver"))     ver     = 3                                                            # Which encode configuration version
 if (!exists("depfile")) depfile = "deps"                                                       # Dependency configuration file
