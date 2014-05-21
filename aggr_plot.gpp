@@ -2,7 +2,7 @@
 # This plots a each stream individually and all the frames it depends on, with the aggregate (sum or avg) plotted as well
 
 # Run this script with (for example):
-#    gnuplot -e "ver=1;depfile='deps1';title='Encode Trial 1';" aggr_plot.gpp
+#    gnuplot -e "ver=1;start=0;end=7;depfile='deps1';title='Encode Trial 1';" aggr_plot.gpp
 
 set term pdfcairo enhanced font "Times,8" size 12,6
 colors = "blue dark-green red dark-magenta dark-yellow orange dark-pink dark-cyan"
@@ -12,7 +12,7 @@ set style line 1 pointtype 7 pointsize 0.5 linecolor "black"
 set key Left
 if (!exists("ver"))     ver     = 3                                                            # Which encode configuration version
 if (!exists("depfile")) depfile = "deps"                                                       # Dependency configuration file
-if (!exists("start"))   start   = system(sprintf("head -1 %s | cut -d ':' -f 1", depfile)) + 0 # Starting stream is user-specified or the first in the dependency file
+if (!exists("start"))   start   = system(sprintf("head -1 %s | cut -d ':' -f 1", depfile)) + 0 # Starting stream is user-specified or the first in the dependency file (this will break if the independent stream is stream 0)
 if (!exists("end"))     end     = system(sprintf("tail -1 %s | cut -d ':' -f 1", depfile)) + 0 # Final stream is user-specified or the last in the dependency file
 
 
@@ -31,7 +31,7 @@ do for [i=start:end] {
     set key at 200,1970000
     plot 'plotting/'.ver.'/stream'.i.'.dat' using 2:4 with points linestyle 10+i title 'Stream '.i
     plot 'plotting/'.ver.'/stream'.i.'.dat' using 2:4:1 with labels offset 1 textcolor rgb word(colors,i+1) notitle
-    if(deps != "") {
+    if("".deps ne "") {
       set key at 200,1940000
       plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", 'plotting/'.ver.'/stream'.dep.'.dat') using 2:4 with points linestyle 10+dep title 'Stream '.dep
       plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", 'plotting/'.ver.'/stream'.dep.'.dat') using 2:4:1 with labels offset 1 textcolor rgb word(colors,dep+1) notitle
@@ -44,6 +44,7 @@ do for [i=start:end] {
 # Total size of each stream, with and without dependencies
 if(exists("title")) set title title.': Total size of each stream, with and without dependencies'
 set xrange [-1:8]
+set xlabel "Stream"
 set yrange[0:60000000]
 set boxwidth 0.25
 set xtics 0,1,7
@@ -57,6 +58,7 @@ set output
 # Frame vs PSNR
 if(exists("title")) set title title.': Frame vs PSNR' 
 set output 'plotting/'.ver.'/aggr_frame_v_psnr.pdf'
+set xlabel "Frame"
 set ylabel "PSNR (dB)"
 set xrange [-1:201]
 set xtics 0,8,200
@@ -69,7 +71,7 @@ do for [i=start:end] {
     plot 'plotting/'.ver.'/stream'.i.'.dat' using 2:3 with points linestyle 10+i title 'Stream '.i
     plot 'plotting/'.ver.'/stream'.i.'.dat' using 2:3:1 with labels offset 1 textcolor rgb word(colors,i+1) notitle
     set key at 200,33.7
-    if(deps != "") {
+    if("".deps ne "") {
       plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", 'plotting/'.ver.'/stream'.dep.'.dat') using 2:3 with points linestyle 10+dep title 'Stream '.dep
       plot for [dep in deps] sprintf("<(grep REF_VIEW %s)", 'plotting/'.ver.'/stream'.dep.'.dat') using 2:3:1 with labels offset 1 textcolor rgb word(colors,dep+1) notitle
       set key at 200,33.9
@@ -81,14 +83,15 @@ do for [i=start:end] {
 # Average PSNR of all streams, with and without dependencies
 if(exists("title")) set title title.': Average PSNR of all streams, with and without dependencies'
 set xrange [-1:8]
+set xlabel "Stream"
 set yrange [28:34]
 set boxwidth 0.25
 set style fill solid
 set xtics 0,1,7
 unset grid
 set key at 7,33.8
-plot sprintf("<for stream in \`seq %d %d \`; do for i in \`grep -e ^\$stream %s | cut -d ':' -f 2\`; do grep REF_VIEW plotting/%d/stream${i}.dat; done | cat - plotting/%d/stream${stream}.dat | grep -v Frame | awk '{sum+=$3;count+=1} END { print '$stream'\"  \"sum/count; }'; done",start,end,depfile,ver,ver) using ($1):2 with boxes fillstyle pattern 1 linecolor rgb "blue" title "Average PSNR with Dependent Frames" ,\
-     sprintf("<for stream in \`seq %d %d \`; do grep -v Frame plotting/%d/stream${stream}.dat | awk '{sum+=$3;count+=1} END { print '$stream'\"  \"sum/count; }'; done",start,end,ver) using ($1-0.3):2 with boxes fillstyle pattern 2 linecolor rgb "red" title "Average PSNR of Individual Frames",\
-     sprintf("<for stream in \`seq %d %d \`; do for i in \`grep -e ^\$stream %s | cut -d ':' -f 2\`; do cat plotting/%d/stream${i}.dat; done | cat - plotting/%d/stream${stream}.dat | grep -v Frame | awk '{sum+=$3;count+=1} END { print '$stream'\"  \"sum/count; }'; done",start,end,depfile,ver,ver) using ($1+0.3):2 with boxes fillstyle pattern 4 linecolor rgb "black" title "Average PSNR with All Frames in Dependent Stream"
+plot sprintf("<for stream in \`seq %d %d \`; do for i in \`grep -e ^\$stream %s | cut -d ':' -f 2\`; do grep REF_VIEW plotting/%d/stream${i}.dat; done | cat - plotting/%d/stream${stream}.dat | grep -v Frame | awk 'BEGIN { sum=0;count=0; } {sum+=$3;count+=1} END { print '$stream'\"  \"sum/count; }'; done",start,end,depfile,ver,ver) using ($1):2 with boxes fillstyle pattern 1 linecolor rgb "blue" title "Average PSNR with Dependent Frames" ,\
+     sprintf("<for stream in \`seq %d %d \`; do grep -v Frame plotting/%d/stream${stream}.dat | awk 'BEGIN { sum=0;count=0; } {sum+=$3;count+=1} END { print '$stream'\"  \"sum/count; }'; done",start,end,ver) using ($1-0.3):2 with boxes fillstyle pattern 2 linecolor rgb "red" title "Average PSNR of Individual Frames",\
+     sprintf("<for stream in \`seq %d %d \`; do for i in \`grep -e ^\$stream %s | cut -d ':' -f 2\`; do cat plotting/%d/stream${i}.dat; done | cat - plotting/%d/stream${stream}.dat | grep -v Frame | awk 'BEGIN { sum=0;count=0; } {sum+=$3;count+=1} END { print '$stream'\"  \"sum/count; }'; done",start,end,depfile,ver,ver) using ($1+0.3):2 with boxes fillstyle pattern 4 linecolor rgb "black" title "Average PSNR with All Frames in Dependent Stream"
 
 set output
